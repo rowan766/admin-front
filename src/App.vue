@@ -1,29 +1,25 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <el-button type="primary">主要按钮</el-button>
-    <el-button type="success">成功按钮</el-button>
-    <el-button type="info">信息按钮</el-button>
-    <el-button type="warning">警告按钮</el-button>
-    <el-button type="danger">危险按钮</el-button>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <router-view />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script setup>
+// Main App Component
+</script>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+#app {
+  width: 100%;
+  height: 100vh;
 }
 </style>
