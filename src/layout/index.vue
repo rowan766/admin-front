@@ -34,6 +34,10 @@
             <el-icon><Menu /></el-icon>
             <template #title>菜单管理</template>
           </el-menu-item>
+          <el-menu-item index="/system/dict">
+            <el-icon><Document /></el-icon>
+            <template #title>数据字典</template>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -79,6 +83,7 @@ import {
   User,
   Avatar,
   Menu,
+  Document,
   UserFilled,
   Expand,
   Fold

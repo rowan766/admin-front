@@ -39,6 +39,12 @@ const routes = [
         meta: { title: '菜单管理' }
       },
       {
+        path: '/system/dict',
+        name: 'SystemDict',
+        component: () => import('../views/system/Dict.vue'),
+        meta: { title: '数据字典' }
+      },
+      {
         path: '/profile',
         name: 'Profile',
         component: () => import('../views/Profile.vue'),
