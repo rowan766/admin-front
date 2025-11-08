@@ -10,6 +10,11 @@ export const getUserMenus = () => {
   return request.get('/menu')
 }
 
+// 获取用户菜单
+export const getUserProfile = () => {
+  return request.get('/user/profile')
+}
+
 // 退出登录
 export const logout = () => {
   return request.post('/auth/logout')

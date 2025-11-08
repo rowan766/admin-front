@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi, getUserMenus as getUserMenusApi } from '../api/auth'
+import { login as loginApi, getUserMenus as getUserMenusApi ,getUserProfile as getUserProfileApi} from '../api/auth'
 
 export const useUserStore = defineStore('user', {
   // 状态
@@ -23,8 +23,8 @@ export const useUserStore = defineStore('user', {
       try {
         const res = await loginApi(credentials)
         this.token = res.data.access_token
-        this.userInfo = res.data.user
         localStorage.setItem('token', this.token)
+        await this.getUserProfile()
         await this.getUserMenus()
         return res
       } catch (error) {
@@ -35,8 +35,19 @@ export const useUserStore = defineStore('user', {
     // 获取用户菜单信息
     async getUserMenus() {
       try {
-        const res = await getUserMenusApi()
+        const res = await getUserProfileApi()
         this.menuInfo = res.data
+        return res.data
+      } catch (error) {
+        throw error
+      }
+    },
+
+    // 获取登录用户信息
+    async getUserProfile() {
+      try {
+        const res = await getUserMenusApi()
+        this.userInfo = res.data
         return res.data
       } catch (error) {
         throw error
