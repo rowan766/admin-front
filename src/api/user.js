@@ -2,25 +2,25 @@ import request from '../utils/request'
 
 // 获取用户列表
 export const getUserList = (params) => {
-  return request.get('/users', { params })
+  return request.get('/user', { params })
 }
 
 // 创建用户
 export const createUser = (data) => {
-  return request.post('/users', data)
+  return request.post('/user', data)
 }
 
 // 更新用户
 export const updateUser = (id, data) => {
-  return request.put(`/users/${id}`, data)
+  return request.put(`/user/${id}`, data)
 }
 
 // 删除用户
 export const deleteUser = (id) => {
-  return request.delete(`/users/${id}`)
+  return request.delete(`/user/${id}`)
 }
 
 // 获取用户详情
 export const getUserDetail = (id) => {
-  return request.get(`/users/${id}`)
+  return request.get(`/user/${id}`)
 }
