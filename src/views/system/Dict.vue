@@ -425,9 +425,6 @@
   // 获取字典数据列表
   const fetchDataList = async () => {
     if (!currentType.value) return
-
-    console.log('123456=>',)
-
     dataLoading.value = true
     try {
       const params = {
