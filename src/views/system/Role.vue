@@ -242,8 +242,8 @@
         ...searchForm
       }
       const res = await getRoleList(params)
-      tableData.value = res.data || res.list || []
-      pagination.total = res.total || 0
+      tableData.value = res.data?.list || res.data || res.list || []
+      pagination.total = res.data?.total || res.total || tableData.value.length
     } catch (error) {
       ElMessage.error(error.message || '获取角色列表失败')
     } finally {
@@ -322,6 +322,15 @@
     permissionDialogVisible.value = true
   }
 
+  const buildRolePayload = () => ({
+    name: formData.name,
+    code: formData.code,
+    description: formData.description,
+    dataScope: formData.dataScope,
+    sort: formData.sort,
+    status: formData.status
+  })
+
   // 提交表单
   const handleSubmit = async () => {
     if (!formRef.value) return
@@ -330,11 +339,13 @@
       if (valid) {
         submitLoading.value = true
         try {
+          const payload = buildRolePayload()
+
           if (formData.id) {
-            await updateRole(formData.id, formData)
+            await updateRole(formData.id, payload)
             ElMessage.success('更新成功')
           } else {
-            await createRole(formData)
+            await createRole(payload)
             ElMessage.success('创建成功')
           }
           dialogVisible.value = false

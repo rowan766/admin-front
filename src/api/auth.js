@@ -7,7 +7,7 @@ export const login = (data) => {
 
 // 获取用户菜单
 export const getUserMenus = () => {
-  return request.get('/menu')
+  return request.get('/user/current/menus')
 }
 
 // 获取用户菜单

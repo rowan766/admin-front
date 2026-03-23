@@ -28,10 +28,10 @@
 
   // 更新菜单状态
   export const updateMenuStatus = (id, status) => {
-    return request.patch(`/menu/${id}/status`, { status })
+    return request.patch(`/menu/${id}`, { status })
   }
 
   // 获取菜单树（用于下拉选择）
   export const getMenuTree = () => {
-    return request.get('/menu/tree')
+    return request.get('/menu')
   }

@@ -27,15 +27,15 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="role" label="角色" width="120" />
+        <el-table-column prop="roleNames" label="角色" width="160" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
-              {{ row.status === 'active' ? '正常' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '正常' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="160" />
+        <el-table-column prop="createdAt" label="创建时间" min-width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
@@ -79,16 +79,10 @@
         <el-form-item label="密码" prop="password" v-if="!formData.id">
           <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="formData.role" placeholder="请选择角色">
-            <el-option label="管理员" value="admin" />
-            <el-option label="普通用户" value="user" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="formData.status">
-            <el-radio value="active">正常</el-radio>
-            <el-radio value="inactive">禁用</el-radio>
+            <el-radio :value="1">正常</el-radio>
+            <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -130,8 +124,7 @@ const formData = reactive({
   username: '',
   email: '',
   password: '',
-  role: 'user',
-  status: 'active'
+  status: 1
 })
 
 const rules = {
@@ -147,8 +140,8 @@ const rules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
   ],
-  role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+  status: [
+    { required: true, message: '请选择状态', trigger: 'change' }
   ]
 }
 
@@ -162,8 +155,12 @@ const fetchUserList = async () => {
       ...searchForm
     }
     const res = await getUserList(params)
-    tableData.value = res.data || res.list || []
-    pagination.total = res.total || 0
+    const users = res.data?.list || res.data || res.list || []
+    tableData.value = users.map(user => ({
+      ...user,
+      roleNames: user.roles?.map(item => item.role?.name).filter(Boolean).join('、') || '-'
+    }))
+    pagination.total = res.data?.total || res.total || tableData.value.length
   } catch (error) {
     ElMessage.error('获取用户列表失败')
     // 使用模拟数据
@@ -172,17 +169,17 @@ const fetchUserList = async () => {
         id: 1,
         username: 'admin',
         email: 'admin@example.com',
-        role: '管理员',
-        status: 'active',
-        createTime: '2024-11-01 10:00:00'
+        roleNames: '管理员',
+        status: 1,
+        createdAt: '2024-11-01 10:00:00'
       },
       {
         id: 2,
         username: 'user1',
         email: 'user1@example.com',
-        role: '普通用户',
-        status: 'active',
-        createTime: '2024-11-02 11:00:00'
+        roleNames: '普通用户',
+        status: 1,
+        createdAt: '2024-11-02 11:00:00'
       }
     ]
     pagination.total = 2
@@ -213,7 +210,13 @@ const handleAdd = () => {
 // 编辑
 const handleEdit = (row) => {
   dialogTitle.value = '编辑用户'
-  Object.assign(formData, row)
+  Object.assign(formData, {
+    id: row.id,
+    username: row.username,
+    email: row.email || '',
+    password: '',
+    status: row.status ?? 1
+  })
   dialogVisible.value = true
 }
 
@@ -243,11 +246,20 @@ const handleSubmit = async () => {
     if (valid) {
       submitLoading.value = true
       try {
+        const payload = {
+          username: formData.username,
+          email: formData.email,
+          status: formData.status
+        }
+
         if (formData.id) {
-          await updateUser(formData.id, formData)
+          await updateUser(formData.id, payload)
           ElMessage.success('更新成功')
         } else {
-          await createUser(formData)
+          await createUser({
+            ...payload,
+            password: formData.password
+          })
           ElMessage.success('创建成功')
         }
         dialogVisible.value = false
@@ -269,8 +281,7 @@ const handleDialogClose = () => {
     username: '',
     email: '',
     password: '',
-    role: 'user',
-    status: 'active'
+    status: 1
   })
 }
 

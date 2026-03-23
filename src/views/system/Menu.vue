@@ -374,6 +374,20 @@
     }
   }
 
+  const buildMenuPayload = () => ({
+    parentId: formData.parentId,
+    name: formData.name,
+    title: formData.title,
+    type: formData.type,
+    path: formData.path,
+    component: formData.component,
+    permission: formData.permission,
+    icon: formData.icon,
+    sort: formData.sort,
+    visible: formData.visible,
+    status: formData.status
+  })
+
   // 提交
   const handleSubmit = async () => {
     if (!formRef.value) return
@@ -382,11 +396,13 @@
       if (valid) {
         submitLoading.value = true
         try {
+          const payload = buildMenuPayload()
+
           if (formData.id) {
-            await updateMenu(formData.id, formData)
+            await updateMenu(formData.id, payload)
             ElMessage.success('更新成功')
           } else {
-            await createMenu(formData)
+            await createMenu(payload)
             ElMessage.success('创建成功')
           }
           dialogVisible.value = false

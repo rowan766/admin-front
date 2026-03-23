@@ -100,7 +100,7 @@
                 </el-table-column>
               </el-table>
 
-              <!-- <div class="pagination" v-if="dataPagination.total > 0">
+              <div class="pagination" v-if="dataPagination.total > 0">
                 <el-pagination
                   v-model:current-page="dataPagination.page"
                   v-model:page-size="dataPagination.pageSize"
@@ -111,7 +111,7 @@
                   @size-change="fetchDataList"
                   @current-change="fetchDataList"
                 />
-              </div> -->
+              </div>
             </template>
           </el-card>
         </el-col>
@@ -230,7 +230,6 @@
     updateDictData,
     deleteDictData,
     updateDictDataStatus,
-    getDictTypeDetail
   } from '../../api/dict'
 
   // ==================== 字典类型相关 ====================
@@ -281,8 +280,8 @@
         pageSize: typePagination.pageSize
       }
       const res = await getDictTypeList(params)
-      typeTableData.value = res.data || res.list || []
-      typePagination.total = res.total || 0
+      typeTableData.value = res.data?.list || res.data || res.list || []
+      typePagination.total = res.data?.total || res.total || typeTableData.value.length
     } catch (error) {
       ElMessage.error(error.message || '获取字典类型列表失败')
     } finally {
@@ -341,6 +340,14 @@
     }
   }
 
+  const buildDictTypePayload = () => ({
+    name: typeFormData.name,
+    code: typeFormData.code,
+    description: typeFormData.description,
+    sort: typeFormData.sort,
+    status: typeFormData.status
+  })
+
   // 提交字典类型
   const handleTypeSubmit = async () => {
     if (!typeFormRef.value) return
@@ -349,11 +356,13 @@
       if (valid) {
         typeSubmitLoading.value = true
         try {
+          const payload = buildDictTypePayload()
+
           if (typeFormData.id) {
-            await updateDictType(typeFormData.id, typeFormData)
+            await updateDictType(typeFormData.id, payload)
             ElMessage.success('更新成功')
           } else {
-            await createDictType(typeFormData)
+            await createDictType(payload)
             ElMessage.success('创建成功')
           }
           typeDialogVisible.value = false
@@ -431,9 +440,9 @@
         page: dataPagination.page,
         pageSize: dataPagination.pageSize
       }
-      const res = await getDictTypeDetail(currentType.value.id, params)
-      dataTableData.value = res.data.items || res.list || []
-    //   dataPagination.total = res.data.items.length || 0
+      const res = await getDictDataList(currentType.value.id, params)
+      dataTableData.value = res.data?.list || res.data || res.list || []
+      dataPagination.total = res.data?.total || res.total || dataTableData.value.length
     } catch (error) {
       ElMessage.error(error.message || '获取字典数据列表失败')
     } finally {
@@ -498,6 +507,16 @@
     }
   }
 
+  const buildDictDataPayload = () => ({
+    dictTypeId: dataFormData.dictTypeId,
+    label: dataFormData.label,
+    value: dataFormData.value,
+    cssClass: dataFormData.cssClass,
+    sort: dataFormData.sort,
+    remark: dataFormData.remark,
+    status: dataFormData.status
+  })
+
   // 提交字典数据
   const handleDataSubmit = async () => {
     if (!dataFormRef.value) return
@@ -506,11 +525,13 @@
       if (valid) {
         dataSubmitLoading.value = true
         try {
+          const payload = buildDictDataPayload()
+
           if (dataFormData.id) {
-            await updateDictData(dataFormData.id, dataFormData)
+            await updateDictData(dataFormData.id, payload)
             ElMessage.success('更新成功')
           } else {
-            await createDictData(dataFormData)
+            await createDictData(payload)
             ElMessage.success('创建成功')
           }
           dataDialogVisible.value = false

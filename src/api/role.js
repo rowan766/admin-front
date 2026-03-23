@@ -12,7 +12,7 @@
 
   // 更新角色
   export const updateRole = (id, data) => {
-    return request.put(`/role/${id}`, data)
+    return request.patch(`/role/${id}`, data)
   }
 
   // 删除角色
@@ -27,7 +27,7 @@
 
   // 更新角色状态
   export const updateRoleStatus = (id, status) => {
-    return request.patch(`/role/${id}/status`, { status })
+    return request.patch(`/role/${id}`, { status })
   }
 
   // 为角色分配菜单
