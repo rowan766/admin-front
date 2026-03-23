@@ -3,7 +3,7 @@
     <div class="dict-management">
       <el-row :gutter="20">
         <!-- 左侧：字典类型 -->
-        <el-col :span="8">
+        <el-col :span="10">
           <el-card>
             <template #header>
               <div class="card-header">
@@ -30,7 +30,7 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="120" align="center">
+              <el-table-column label="操作" width="200" align="center">
                 <template #default="{ row }">
                   <el-button type="primary" size="small" link :icon="Edit" @click="handleEditType(row)">编辑</el-button>
                   <el-button type="danger" size="small" link :icon="Delete" @click="handleDeleteType(row)">删除</el-button>
@@ -54,7 +54,7 @@
         </el-col>
 
         <!-- 右侧：字典数据 -->
-        <el-col :span="16">
+        <el-col :span="14">
           <el-card>
             <template #header>
               <div class="card-header">
