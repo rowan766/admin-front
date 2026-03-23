@@ -199,13 +199,7 @@ const leaderMap = computed(() => {
   }, {})
 })
 
-const departmentTreeOptions = computed(() => ([
-  {
-    id: null,
-    name: '顶级部门',
-    children: rawDepartmentTree.value
-  }
-]))
+const departmentTreeOptions = computed(() => rawDepartmentTree.value)
 
 const decorateDepartmentTree = (departments = []) => {
   return departments.map((department) => ({

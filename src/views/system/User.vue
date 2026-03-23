@@ -142,13 +142,7 @@ const formData = reactive({
   status: 1
 })
 
-const departmentTreeOptions = computed(() => ([
-  {
-    id: null,
-    name: '未分配部门',
-    children: departmentTree.value
-  }
-]))
+const departmentTreeOptions = computed(() => departmentTree.value)
 
 const rules = {
   username: [

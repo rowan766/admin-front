@@ -285,9 +285,7 @@
 
   // 菜单树数据（用于下拉选择）
   const menuTreeData = computed(() => {
-    return [
-      { id: null, title: '顶级菜单', children: buildMenuTree(tableData.value) }
-    ]
+    return buildMenuTree(tableData.value)
   })
 
   // 构建菜单树
