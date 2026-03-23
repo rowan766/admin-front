@@ -208,7 +208,8 @@
     Calendar,
     ShoppingCart,
     Goods,
-    Management
+    Management,
+    OfficeBuilding
   } from '@element-plus/icons-vue'
   import { getMenuList, createMenu, updateMenu, deleteMenu, updateMenuStatus } from '../../api/menu'
 
@@ -235,7 +236,8 @@
     { label: '日历', value: 'Calendar' },
     { label: '购物车', value: 'ShoppingCart' },
     { label: '商品', value: 'Goods' },
-    { label: '管理', value: 'Management' }
+    { label: '管理', value: 'Management' },
+    { label: '部门', value: 'OfficeBuilding' }
   ]
 
   const formData = reactive({

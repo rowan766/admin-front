@@ -27,6 +27,7 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" min-width="120" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column prop="departmentName" label="所属部门" min-width="160" show-overflow-tooltip />
         <el-table-column prop="roleNames" label="角色" width="160" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -76,6 +77,17 @@
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="formData.email" placeholder="请输入邮箱" />
         </el-form-item>
+        <el-form-item label="部门" prop="departmentId">
+          <el-tree-select
+            v-model="formData.departmentId"
+            :data="departmentTreeOptions"
+            :props="{ label: 'name', value: 'id' }"
+            placeholder="请选择所属部门"
+            check-strictly
+            clearable
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="密码" prop="password" v-if="!formData.id">
           <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password />
         </el-form-item>
@@ -95,16 +107,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
 import { getUserList, createUser, updateUser, deleteUser } from '../../api/user'
+import { getDepartmentList } from '../../api/department'
 
 const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
 const formRef = ref(null)
+const departmentTree = ref([])
 
 const searchForm = reactive({
   username: '',
@@ -123,9 +137,18 @@ const formData = reactive({
   id: null,
   username: '',
   email: '',
+  departmentId: null,
   password: '',
   status: 1
 })
+
+const departmentTreeOptions = computed(() => ([
+  {
+    id: null,
+    name: '未分配部门',
+    children: departmentTree.value
+  }
+]))
 
 const rules = {
   username: [
@@ -158,6 +181,7 @@ const fetchUserList = async () => {
     const users = res.data?.list || res.data || res.list || []
     tableData.value = users.map(user => ({
       ...user,
+      departmentName: user.department?.name || '-',
       roleNames: user.roles?.map(item => item.role?.name).filter(Boolean).join('、') || '-'
     }))
     pagination.total = res.data?.total || res.total || tableData.value.length
@@ -188,6 +212,16 @@ const fetchUserList = async () => {
   }
 }
 
+const fetchDepartmentTree = async () => {
+  try {
+    const res = await getDepartmentList()
+    departmentTree.value = res.data || res.list || []
+  } catch (error) {
+    departmentTree.value = []
+    ElMessage.error(error.message || '获取部门列表失败')
+  }
+}
+
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
@@ -214,6 +248,7 @@ const handleEdit = (row) => {
     id: row.id,
     username: row.username,
     email: row.email || '',
+    departmentId: row.departmentId || null,
     password: '',
     status: row.status ?? 1
   })
@@ -249,6 +284,7 @@ const handleSubmit = async () => {
         const payload = {
           username: formData.username,
           email: formData.email,
+          ...(formData.departmentId ? { departmentId: formData.departmentId } : {}),
           status: formData.status
         }
 
@@ -280,6 +316,7 @@ const handleDialogClose = () => {
     id: null,
     username: '',
     email: '',
+    departmentId: null,
     password: '',
     status: 1
   })
@@ -295,6 +332,7 @@ const handleCurrentChange = () => {
 }
 
 onMounted(() => {
+  fetchDepartmentTree()
   fetchUserList()
 })
 </script>
