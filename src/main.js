@@ -14,6 +14,7 @@ import router from './router'
 // 引入 Pinia
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+import { createPermissionDirective } from './directives/permission'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -27,4 +28,5 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(pinia)
 app.use(ElementPlus)
 app.use(router)
+app.directive('permission', createPermissionDirective(pinia))
 app.mount('#app')

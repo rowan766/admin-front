@@ -14,9 +14,9 @@
       </template>
 
       <div class="action-toolbar">
-        <el-button v-if="hasPermission('asset:bridge:create')" type="primary">新增桥梁</el-button>
-        <el-button v-if="hasPermission('asset:bridge:update')">编辑桥梁</el-button>
-        <el-button v-if="hasPermission('asset:bridge:delete')" type="danger">删除桥梁</el-button>
+        <el-button v-permission="'asset:bridge:create'" type="primary">新增桥梁</el-button>
+        <el-button v-permission="'asset:bridge:update'">编辑桥梁</el-button>
+        <el-button v-permission="'asset:bridge:delete'" type="danger">删除桥梁</el-button>
       </div>
 
       <el-empty

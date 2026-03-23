@@ -15,11 +15,15 @@ const collectPermissionCodes = (menus = [], codes = new Set()) => {
   return codes
 }
 
+export const buildPermissionCodeSet = (menus = []) => {
+  return collectPermissionCodes(menus, new Set())
+}
+
 export const usePermission = () => {
   const userStore = useUserStore()
 
   const permissionCodes = computed(() => {
-    return Array.from(collectPermissionCodes(userStore.menus || []))
+    return Array.from(buildPermissionCodeSet(userStore.menus || []))
   })
 
   const hasPermission = (permission) => {
