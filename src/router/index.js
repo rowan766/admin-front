@@ -1,5 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import {
+  DEFAULT_HOME_PATH,
+  getFirstAccessiblePath,
+  hasDynamicRoutes,
+  registerDynamicRoutes,
+  resetDynamicRoutes,
+  ROOT_ROUTE_NAME
+} from './menuRuntime'
 
 const routes = [
   {
@@ -10,40 +18,11 @@ const routes = [
   },
   {
     path: '/',
+    name: ROOT_ROUTE_NAME,
     component: () => import('../layout/index.vue'),
-    redirect: '/dashboard',
+    redirect: DEFAULT_HOME_PATH,
     meta: { requiresAuth: true },
     children: [
-      {
-        path: '/dashboard',
-        name: 'Dashboard',
-        component: () => import('../views/Dashboard.vue'),
-        meta: { title: '首页' }
-      },
-      {
-        path: '/system/user',
-        name: 'SystemUser',
-        component: () => import('../views/system/User.vue'),
-        meta: { title: '用户管理' }
-      },
-      {
-        path: '/system/role',
-        name: 'SystemRole',
-        component: () => import('../views/system/Role.vue'),
-        meta: { title: '角色管理' }
-      },
-      {
-        path: '/system/menu',
-        name: 'SystemMenu',
-        component: () => import('../views/system/Menu.vue'),
-        meta: { title: '菜单管理' }
-      },
-      {
-        path: '/system/dict',
-        name: 'SystemDict',
-        component: () => import('../views/system/Dict.vue'),
-        meta: { title: '数据字典' }
-      },
       {
         path: '/profile',
         name: 'Profile',
@@ -59,33 +38,71 @@ const router = createRouter({
   routes
 })
 
+const resolveDefaultPath = (menus) => {
+  return getFirstAccessiblePath(menus)
+}
+
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
   const isLoggedIn = userStore.isLoggedIn
 
-  // 设置页面标题
+  if (!isLoggedIn && hasDynamicRoutes()) {
+    resetDynamicRoutes(router)
+  }
+
+  if (to.meta.requiresAuth === false) {
+    if (to.path === '/login' && isLoggedIn) {
+      await userStore.ensureUserContext({ refreshMenus: !hasDynamicRoutes() })
+
+      if (!hasDynamicRoutes()) {
+        registerDynamicRoutes(router, userStore.menus)
+      }
+
+      return resolveDefaultPath(userStore.menus)
+    }
+
+    return true
+  }
+
+  if (!isLoggedIn) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+
+  try {
+    await userStore.ensureUserContext({ refreshMenus: !hasDynamicRoutes() })
+
+    if (!hasDynamicRoutes()) {
+      registerDynamicRoutes(router, userStore.menus)
+
+      if (to.path === '/') {
+        return resolveDefaultPath(userStore.menus)
+      }
+
+      return { path: to.fullPath, replace: true }
+    }
+
+    if (to.path === '/') {
+      return resolveDefaultPath(userStore.menus)
+    }
+
+    if (!to.matched.length) {
+      return resolveDefaultPath(userStore.menus)
+    }
+
+    return true
+  } catch (error) {
+    userStore.logout()
+    resetDynamicRoutes(router)
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+})
+
+router.afterEach((to) => {
   if (to.meta.title) {
     document.title = `${to.meta.title} - 后台管理系统`
   } else {
     document.title = '后台管理系统'
-  }
-
-  // 检查是否需要登录
-  if (to.meta.requiresAuth !== false) {
-    if (!isLoggedIn) {
-      // 未登录，跳转到登录页
-      next({ path: '/login', query: { redirect: to.fullPath } })
-    } else {
-      next()
-    }
-  } else {
-    // 已登录用户访问登录页，重定向到首页
-    if (to.path === '/login' && isLoggedIn) {
-      next('/')
-    } else {
-      next()
-    }
   }
 })
 

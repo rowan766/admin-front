@@ -13,6 +13,7 @@
             </template>
 
             <el-table
+              ref="typeTableRef"
               :data="typeTableData"
               border
               style="width: 100%"
@@ -72,10 +73,13 @@
 
             <template v-else>
               <el-table
+                ref="dataTableRef"
                 :data="dataTableData"
                 border
                 style="width: 100%"
                 v-loading="dataLoading"
+                highlight-current-row
+                @current-change="handleDataSelect"
               >
                 <el-table-column prop="label" label="字典标签" min-width="120" />
                 <el-table-column prop="value" label="字典值" min-width="100" />
@@ -216,7 +220,7 @@
   </template>
 
   <script setup>
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { Plus, Edit, Delete } from '@element-plus/icons-vue'
   import {
@@ -238,8 +242,10 @@
   const typeDialogVisible = ref(false)
   const typeDialogTitle = ref('新增字典类型')
   const typeFormRef = ref(null)
+  const typeTableRef = ref(null)
   const typeTableData = ref([])
   const currentType = ref(null)
+  const syncingTypeSelection = ref(false)
 
   const typePagination = reactive({
     page: 1,
@@ -271,6 +277,42 @@
     ]
   }
 
+  const syncTypeSelection = async (row) => {
+    syncingTypeSelection.value = true
+    await nextTick()
+    typeTableRef.value?.setCurrentRow(row || null)
+    await nextTick()
+    syncingTypeSelection.value = false
+  }
+
+  const syncDataSelection = async (row) => {
+    syncingDataSelection.value = true
+    await nextTick()
+    dataTableRef.value?.setCurrentRow(row || null)
+    await nextTick()
+    syncingDataSelection.value = false
+  }
+
+  const applyCurrentType = async (row, { resetDataPage = true } = {}) => {
+    currentType.value = row
+    currentData.value = null
+
+    if (!row) {
+      dataTableData.value = []
+      dataPagination.total = 0
+      await syncTypeSelection(null)
+      await syncDataSelection(null)
+      return
+    }
+
+    if (resetDataPage) {
+      dataPagination.page = 1
+    }
+
+    await syncTypeSelection(row)
+    await fetchDataList()
+  }
+
   // 获取字典类型列表
   const fetchTypeList = async () => {
     typeLoading.value = true
@@ -282,6 +324,17 @@
       const res = await getDictTypeList(params)
       typeTableData.value = res.data?.list || res.data || res.list || []
       typePagination.total = res.data?.total || res.total || typeTableData.value.length
+
+      if (!typeTableData.value.length) {
+        await applyCurrentType(null)
+        return
+      }
+
+      const selectedType = currentType.value
+        ? typeTableData.value.find(item => item.id === currentType.value.id) || typeTableData.value[0]
+        : typeTableData.value[0]
+
+      await applyCurrentType(selectedType, { resetDataPage: true })
     } catch (error) {
       ElMessage.error(error.message || '获取字典类型列表失败')
     } finally {
@@ -290,12 +343,10 @@
   }
 
   // 选择字典类型
-  const handleTypeSelect = (row) => {
-    currentType.value = row
-    if (row) {
-      dataPagination.page = 1
-      fetchDataList()
-    }
+  const handleTypeSelect = async (row) => {
+    if (syncingTypeSelection.value) return
+
+    await applyCurrentType(row)
   }
 
   // 新增字典类型
@@ -330,7 +381,9 @@
       ElMessage.success('删除成功')
       if (currentType.value?.id === row.id) {
         currentType.value = null
+        currentData.value = null
         dataTableData.value = []
+        dataPagination.total = 0
       }
       fetchTypeList()
     } catch (error) {
@@ -395,7 +448,10 @@
   const dataDialogVisible = ref(false)
   const dataDialogTitle = ref('新增字典数据')
   const dataFormRef = ref(null)
+  const dataTableRef = ref(null)
   const dataTableData = ref([])
+  const currentData = ref(null)
+  const syncingDataSelection = ref(false)
 
   const dataPagination = reactive({
     page: 1,
@@ -433,7 +489,13 @@
 
   // 获取字典数据列表
   const fetchDataList = async () => {
-    if (!currentType.value) return
+    if (!currentType.value) {
+      dataTableData.value = []
+      dataPagination.total = 0
+      currentData.value = null
+      await syncDataSelection(null)
+      return
+    }
     dataLoading.value = true
     try {
       const params = {
@@ -443,11 +505,30 @@
       const res = await getDictDataList(currentType.value.id, params)
       dataTableData.value = res.data?.list || res.data || res.list || []
       dataPagination.total = res.data?.total || res.total || dataTableData.value.length
+
+      if (!dataTableData.value.length) {
+        currentData.value = null
+        await syncDataSelection(null)
+        return
+      }
+
+      const selectedData = currentData.value
+        ? dataTableData.value.find(item => item.id === currentData.value.id) || dataTableData.value[0]
+        : dataTableData.value[0]
+
+      currentData.value = selectedData
+      await syncDataSelection(selectedData)
     } catch (error) {
       ElMessage.error(error.message || '获取字典数据列表失败')
     } finally {
       dataLoading.value = false
     }
+  }
+
+  const handleDataSelect = (row) => {
+    if (syncingDataSelection.value) return
+
+    currentData.value = row || null
   }
 
   // 新增字典数据

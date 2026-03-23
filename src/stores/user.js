@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
-import { login as loginApi, getUserMenus as getUserMenusApi ,getUserProfile as getUserProfileApi} from '../api/auth'
+import { login as loginApi, getUserMenus as getUserMenusApi, getUserProfile as getUserProfileApi } from '../api/auth'
+import { getMenuList as getMenuListApi } from '../api/menu'
+import { normalizeMenuTree } from '../router/menuRuntime'
 
 export const useUserStore = defineStore('user', {
   // 状态
   state: () => ({
-    token: '',
+    token: localStorage.getItem('token') || '',
     userInfo: null,
     menuInfo: null,
     loading: false,
@@ -29,10 +31,10 @@ export const useUserStore = defineStore('user', {
       try {
         const res = await loginApi(credentials)
         this.token = res.data.access_token
-        localStorage.setItem('token',res.data.access_token)
+        localStorage.setItem('token', res.data.access_token)
         await Promise.all([
           this.getUserProfile(),
-          this.getUserMenus()
+          this.getUserMenus({ force: true })
         ])
         return res
       } catch (error) {
@@ -54,23 +56,49 @@ export const useUserStore = defineStore('user', {
     },
 
     // 获取用户菜单信息
-    async getUserMenus() {
+    async getUserMenus({ force = false } = {}) {
+      if (this.menuInfo && !force) {
+        return this.menuInfo
+      }
+
       try {
-        const res = await getUserMenusApi() 
-        this.menuInfo = res.data
-        return res.data
+        const res = await getUserMenusApi()
+        let menus = res.data || []
+
+        // 当前用户未分配菜单时，退回到全量菜单表，方便本地先联调动态路由
+        if (!menus.length) {
+          const fallbackRes = await getMenuListApi()
+          menus = fallbackRes.data || fallbackRes.list || []
+        }
+
+        this.menuInfo = normalizeMenuTree(menus)
+        return this.menuInfo
       } catch (error) {
         throw error
       }
     },
+
+    async ensureUserContext({ refreshMenus = false } = {}) {
+      if (!this.token) {
+        this.token = localStorage.getItem('token') || ''
+      }
+
+      if (!this.userInfo) {
+        await this.getUserProfile()
+      }
+
+      if (!this.menuInfo || refreshMenus) {
+        await this.getUserMenus({ force: refreshMenus })
+      }
+    },
+
     // 退出登录
     logout() {
       this.token = ''
       this.userInfo = null
       this.menuInfo = null
       this.error = null
-      piniaPluginPersistedstate.clearAll();
-      localStorage.clear()
+      localStorage.removeItem('token')
     }
   },
 
@@ -78,7 +106,7 @@ export const useUserStore = defineStore('user', {
   persist: {
     key: 'user-store',
     storage: localStorage,
-    paths: ['userInfo', 'menuInfo']  // 只持久化这些字段，loading 和 error 不持久化
+    paths: ['token', 'userInfo', 'menuInfo'] // 只持久化会话相关字段
   }
 })
  

@@ -16,33 +16,11 @@
         router
         class="layout-menu"
       >
-        <el-menu-item index="/dashboard">
-          <el-icon><HomeFilled /></el-icon>
-          <template #title>首页</template>
-        </el-menu-item>
-
-        <el-sub-menu index="system">
-          <template #title>
-            <el-icon><Setting /></el-icon>
-            <span>系统管理</span>
-          </template>
-          <el-menu-item index="/system/user">
-            <el-icon><User /></el-icon>
-            <template #title>用户管理</template>
-          </el-menu-item>
-          <el-menu-item index="/system/role">
-            <el-icon><Avatar /></el-icon>
-            <template #title>角色管理</template>
-          </el-menu-item>
-          <el-menu-item index="/system/menu">
-            <el-icon><Menu /></el-icon>
-            <template #title>菜单管理</template>
-          </el-menu-item>
-          <el-menu-item index="/system/dict">
-            <el-icon><Document /></el-icon>
-            <template #title>数据字典</template>
-          </el-menu-item>
-        </el-sub-menu>
+        <SidebarMenuItem
+          v-for="menu in menuTree"
+          :key="menu.id"
+          :item="menu"
+        />
       </el-menu>
     </el-aside>
 
@@ -82,17 +60,13 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import {
-  HomeFilled,
-  Setting,
-  User,
-  Avatar,
-  Menu,
-  Document,
   UserFilled,
   Expand,
   Fold
 } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
+import SidebarMenuItem from './SidebarMenuItem.vue'
+import { findOpenMenuIndexes, getRenderableMenus } from '../router/menuRuntime'
 
 const router = useRouter()
 const route = useRoute()
@@ -100,7 +74,8 @@ const userStore = useUserStore()
 
 const isCollapse = ref(false)
 const activeMenu = computed(() => route.path)
-const defaultOpeneds = computed(() => (route.path.startsWith('/system') ? ['system'] : []))
+const menuTree = computed(() => getRenderableMenus(userStore.menus))
+const defaultOpeneds = computed(() => findOpenMenuIndexes(menuTree.value, route.path))
 
 const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
