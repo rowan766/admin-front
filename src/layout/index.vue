@@ -7,8 +7,12 @@
       </div>
       <el-menu
         :default-active="activeMenu"
+        :default-openeds="defaultOpeneds"
         :collapse="isCollapse"
         :collapse-transition="false"
+        background-color="#304156"
+        text-color="#bfcbd9"
+        active-text-color="#ffffff"
         router
         class="layout-menu"
       >
@@ -96,6 +100,7 @@ const userStore = useUserStore()
 
 const isCollapse = ref(false)
 const activeMenu = computed(() => route.path)
+const defaultOpeneds = computed(() => (route.path.startsWith('/system') ? ['system'] : []))
 
 const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
@@ -127,8 +132,9 @@ const handleCommand = async (command) => {
 }
 
 .layout-aside {
-  background-color: #304156;
+  background: linear-gradient(180deg, #2c3a4d 0%, #243244 100%);
   transition: width 0.3s;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
 .logo {
@@ -138,32 +144,90 @@ const handleCommand = async (command) => {
   font-size: 20px;
   font-weight: bold;
   color: white;
-  background-color: #2b3a4b;
+  letter-spacing: 0.06em;
+  background: rgba(14, 23, 38, 0.24);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .layout-menu {
   border-right: none;
-  background-color: #304156;
+  background: transparent;
+  --menu-bg-hover: #35465d;
+  --menu-bg-active: linear-gradient(135deg, #4f9dff 0%, #2f7ef7 100%);
+  --menu-text: #bfcbd9;
+  --menu-text-muted: #8fa3ba;
 }
 
 .layout-menu:not(.el-menu--collapse) {
   width: 200px;
 }
 
+:deep(.el-menu) {
+  border-right: none;
+  background: transparent;
+}
+
+:deep(.el-sub-menu .el-menu) {
+  background: rgba(17, 26, 39, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
 :deep(.el-menu-item),
 :deep(.el-sub-menu__title) {
-  color: #bfcbd9;
+  height: 48px;
+  margin: 6px 10px;
+  border-radius: 12px;
+  color: var(--menu-text);
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 :deep(.el-menu-item:hover),
 :deep(.el-sub-menu__title:hover) {
-  background-color: #263445 !important;
+  background: var(--menu-bg-hover) !important;
   color: #ffffff;
+  transform: translateX(2px);
 }
 
 :deep(.el-menu-item.is-active) {
-  background-color: #409eff !important;
+  background: var(--menu-bg-active) !important;
   color: #ffffff;
+  box-shadow: 0 10px 24px rgba(47, 126, 247, 0.28);
+}
+
+:deep(.el-sub-menu.is-active > .el-sub-menu__title),
+:deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff;
+}
+
+:deep(.el-sub-menu .el-menu-item) {
+  min-width: auto;
+  margin: 4px 10px 4px 18px;
+  padding-left: 40px !important;
+  color: var(--menu-text-muted);
+  background: transparent !important;
+}
+
+:deep(.el-sub-menu .el-menu-item:hover) {
+  background: rgba(79, 157, 255, 0.14) !important;
+  color: #ffffff;
+}
+
+:deep(.el-sub-menu .el-menu-item.is-active) {
+  background: linear-gradient(135deg, rgba(79, 157, 255, 0.22) 0%, rgba(47, 126, 247, 0.36) 100%) !important;
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 #74b4ff;
+}
+
+:deep(.el-menu-item .el-icon),
+:deep(.el-sub-menu__title .el-icon) {
+  color: inherit;
+}
+
+:deep(.el-sub-menu__icon-arrow) {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .layout-header {
