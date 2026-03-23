@@ -1,5 +1,6 @@
 export const ROOT_ROUTE_NAME = 'Root'
 export const DEFAULT_HOME_PATH = '/dashboard'
+export const NO_MENU_PATH = '/no-menu'
 
 const viewModules = import.meta.glob('../views/**/*.vue')
 const fallbackView = viewModules['../views/system/RouteMissing.vue']
@@ -90,7 +91,7 @@ export const getFirstAccessiblePath = (menus = []) => {
     }
   }
 
-  return '/profile'
+  return NO_MENU_PATH
 }
 
 const resolveMenuComponent = (componentPath) => {

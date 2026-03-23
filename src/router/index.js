@@ -4,6 +4,7 @@ import {
   DEFAULT_HOME_PATH,
   getFirstAccessiblePath,
   hasDynamicRoutes,
+  NO_MENU_PATH,
   registerDynamicRoutes,
   resetDynamicRoutes,
   ROOT_ROUTE_NAME
@@ -23,6 +24,12 @@ const routes = [
     redirect: DEFAULT_HOME_PATH,
     meta: { requiresAuth: true },
     children: [
+      {
+        path: NO_MENU_PATH,
+        name: 'NoMenu',
+        component: () => import('../views/NoMenu.vue'),
+        meta: { title: '未分配菜单' }
+      },
       {
         path: '/profile',
         name: 'Profile',

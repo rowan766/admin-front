@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { login as loginApi, getUserMenus as getUserMenusApi, getUserProfile as getUserProfileApi } from '../api/auth'
-import { getMenuList as getMenuListApi } from '../api/menu'
 import { normalizeMenuTree } from '../router/menuRuntime'
 
 export const useUserStore = defineStore('user', {
@@ -63,14 +62,7 @@ export const useUserStore = defineStore('user', {
 
       try {
         const res = await getUserMenusApi()
-        let menus = res.data || []
-
-        // 当前用户未分配菜单时，退回到全量菜单表，方便本地先联调动态路由
-        if (!menus.length) {
-          const fallbackRes = await getMenuListApi()
-          menus = fallbackRes.data || fallbackRes.list || []
-        }
-
+        const menus = res.data || []
         this.menuInfo = normalizeMenuTree(menus)
         return this.menuInfo
       } catch (error) {
