@@ -94,7 +94,7 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="菜单类型" prop="type">
-                <el-radio-group v-model="formData.type">
+                <el-radio-group v-model="formData.type" @change="handleTypeChange">
                   <el-radio value="menu">菜单</el-radio>
                   <el-radio value="button">按钮</el-radio>
                 </el-radio-group>
@@ -104,13 +104,22 @@
 
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="菜单标题" prop="title">
-                <el-input v-model="formData.title" placeholder="请输入菜单标题" maxlength="50" />
+              <el-form-item :label="isButtonType ? '按钮标题' : '菜单标题'" prop="title">
+                <el-input
+                  v-model="formData.title"
+                  :placeholder="isButtonType ? '请输入按钮标题' : '请输入菜单标题'"
+                  maxlength="50"
+                />
               </el-form-item>
             </el-col>
-            <el-col :span="12">
+            <el-col v-if="!isButtonType" :span="12">
               <el-form-item label="路由名称" prop="name">
                 <el-input v-model="formData.name" placeholder="请输入路由名称" maxlength="50" />
+              </el-form-item>
+            </el-col>
+            <el-col v-else :span="12">
+              <el-form-item label="权限标识" prop="permission">
+                <el-input v-model="formData.permission" placeholder="如: asset:bridge:create" maxlength="100" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -128,16 +137,8 @@
             </el-col>
           </el-row>
 
-          <el-row :gutter="20" v-if="formData.type === 'button'">
-            <el-col :span="24">
-              <el-form-item label="权限标识" prop="permission">
-                <el-input v-model="formData.permission" placeholder="如: user:create" maxlength="100" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-
           <el-row :gutter="20">
-            <el-col :span="12">
+            <el-col v-if="!isButtonType" :span="12">
               <el-form-item label="菜单图标" prop="icon">
                 <el-select v-model="formData.icon" placeholder="请选择图标" clearable filterable style="width: 100%">
                   <el-option
@@ -154,7 +155,7 @@
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="12">
+            <el-col :span="isButtonType ? 24 : 12">
               <el-form-item label="排序" prop="sort">
                 <el-input-number v-model="formData.sort" :min="0" :max="9999" style="width: 100%" />
               </el-form-item>
@@ -162,7 +163,7 @@
           </el-row>
 
           <el-row :gutter="20">
-            <el-col :span="12">
+            <el-col v-if="!isButtonType" :span="12">
               <el-form-item label="是否可见" prop="visible">
                 <el-radio-group v-model="formData.visible">
                   <el-radio :value="1">是</el-radio>
@@ -220,6 +221,7 @@
   const formRef = ref(null)
 
   const tableData = ref([])
+  const isButtonType = computed(() => formData.type === 'button')
 
   // 图标选项
   const iconOptions = [
@@ -261,7 +263,7 @@
       { max: 50, message: '菜单标题不能超过50个字符', trigger: 'blur' }
     ],
     name: [
-      { required: true, message: '请输入路由名称', trigger: 'blur' },
+      { required: computed(() => formData.type === 'menu'), message: '请输入路由名称', trigger: 'blur' },
       { max: 50, message: '路由名称不能超过50个字符', trigger: 'blur' }
     ],
     type: [
@@ -283,9 +285,18 @@
     ]
   }
 
+  const filterParentMenuTree = (menus = [], excludeId = null) => {
+    return menus
+      .filter((menu) => menu.type === 'menu' && menu.id !== excludeId)
+      .map((menu) => ({
+        ...menu,
+        children: filterParentMenuTree(menu.children || [], excludeId)
+      }))
+  }
+
   // 菜单树数据（用于下拉选择）
   const menuTreeData = computed(() => {
-    return buildMenuTree(tableData.value)
+    return filterParentMenuTree(tableData.value, formData.id)
   })
 
   // 构建菜单树
@@ -322,6 +333,21 @@
   const handleAdd = () => {
     dialogTitle.value = '新增菜单'
     dialogVisible.value = true
+  }
+
+  const handleTypeChange = (type) => {
+    if (type === 'button') {
+      Object.assign(formData, {
+        name: '',
+        path: '',
+        component: '',
+        icon: '',
+        visible: 1
+      })
+      return
+    }
+
+    formData.permission = ''
   }
 
   // 编辑
@@ -375,16 +401,16 @@
   }
 
   const buildMenuPayload = () => ({
-    parentId: formData.parentId,
-    name: formData.name,
+    ...(formData.parentId ? { parentId: formData.parentId } : {}),
+    ...(formData.type === 'menu' && formData.name ? { name: formData.name } : {}),
     title: formData.title,
     type: formData.type,
-    path: formData.path,
-    component: formData.component,
-    permission: formData.permission,
-    icon: formData.icon,
+    ...(formData.type === 'menu' && formData.path ? { path: formData.path } : {}),
+    ...(formData.type === 'menu' && formData.component ? { component: formData.component } : {}),
+    ...(formData.type === 'button' && formData.permission ? { permission: formData.permission } : {}),
+    ...(formData.type === 'menu' && formData.icon ? { icon: formData.icon } : {}),
     sort: formData.sort,
-    visible: formData.visible,
+    ...(formData.type === 'menu' ? { visible: formData.visible } : {}),
     status: formData.status
   })
 
@@ -394,6 +420,11 @@
 
     await formRef.value.validate(async (valid) => {
       if (valid) {
+        if (formData.id && formData.parentId === formData.id) {
+          ElMessage.warning('上级菜单不能选择当前菜单本身')
+          return
+        }
+
         submitLoading.value = true
         try {
           const payload = buildMenuPayload()

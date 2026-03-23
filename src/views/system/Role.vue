@@ -121,36 +121,65 @@
       </el-dialog>
 
       <!-- 权限配置对话框 -->
-      <el-dialog v-model="permissionDialogVisible" title="权限配置" width="600px">
-        <el-tree
-          ref="treeRef"
-          :data="permissionTree"
-          :props="{ label: 'name', children: 'children' }"
-          show-checkbox
-          node-key="id"
-          :default-checked-keys="checkedKeys"
-        />
+      <el-dialog
+        v-model="permissionDialogVisible"
+        :title="permissionDialogTitle"
+        width="600px"
+        @close="handlePermissionDialogClose"
+      >
+        <div v-loading="permissionLoading" class="permission-tree-wrapper">
+          <el-empty
+            v-if="!permissionLoading && permissionTree.length === 0"
+            description="暂无可配置的菜单权限"
+          />
+          <el-tree
+            v-else
+            ref="treeRef"
+            :data="permissionTree"
+            :props="{ label: 'label', children: 'children' }"
+            show-checkbox
+            node-key="id"
+            default-expand-all
+            check-strictly
+            :check-on-click-node="true"
+            :default-checked-keys="checkedKeys"
+          />
+        </div>
         <template #footer>
           <el-button @click="permissionDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handlePermissionSubmit">确定</el-button>
+          <el-button type="primary" :loading="permissionSubmitLoading" @click="handlePermissionSubmit">确定</el-button>
         </template>
       </el-dialog>
     </div>
   </template>
 
   <script setup>
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, nextTick } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
   import { Plus, Search, Refresh, Edit, Delete, Setting } from '@element-plus/icons-vue'
-  import { getRoleList, createRole, updateRole, deleteRole, updateRoleStatus } from '../../api/role'
+  import {
+    getRoleList,
+    createRole,
+    updateRole,
+    deleteRole,
+    updateRoleStatus,
+    getRoleDetail,
+    setRoleMenu
+  } from '../../api/role'
+  import { getMenuList } from '../../api/menu'
 
   const loading = ref(false)
   const submitLoading = ref(false)
   const dialogVisible = ref(false)
   const permissionDialogVisible = ref(false)
+  const permissionLoading = ref(false)
+  const permissionSubmitLoading = ref(false)
   const dialogTitle = ref('新增角色')
+  const permissionDialogTitle = ref('权限配置')
   const formRef = ref(null)
   const treeRef = ref(null)
+  const currentPermissionRoleId = ref(null)
+  const permissionParentMap = ref(new Map())
 
   const searchForm = reactive({
     name: '',
@@ -198,27 +227,38 @@
     ]
   }
 
-  const permissionTree = ref([
-    {
-      id: 1,
-      name: '系统管理',
-      children: [
-        { id: 11, name: '用户管理' },
-        { id: 12, name: '角色管理' },
-        { id: 13, name: '菜单管理' }
-      ]
-    },
-    {
-      id: 2,
-      name: '内容管理',
-      children: [
-        { id: 21, name: '文章管理' },
-        { id: 22, name: '评论管理' }
-      ]
-    }
-  ])
+  const permissionTree = ref([])
 
   const checkedKeys = ref([])
+
+  const buildPermissionTree = (menus = [], parentId = null) => {
+    return menus.map((menu) => ({
+      id: menu.id,
+      parentId,
+      label: menu.title || menu.name || (menu.type === 'button' ? menu.permission : `菜单#${menu.id}`),
+      type: menu.type,
+      permission: menu.permission,
+      children: buildPermissionTree(menu.children || [], menu.id)
+    }))
+  }
+
+  const buildPermissionParentMap = (nodes = [], map = new Map()) => {
+    nodes.forEach((node) => {
+      map.set(node.id, node.parentId)
+
+      if (node.children?.length) {
+        buildPermissionParentMap(node.children, map)
+      }
+    })
+
+    return map
+  }
+
+  const extractRoleMenuIds = (roleDetail) => {
+    return (roleDetail?.menus || [])
+      .map((item) => item.menuId ?? item.menu?.id)
+      .filter((id) => typeof id === 'number')
+  }
 
   // 数据权限范围标签
   const getDataScopeLabel = (dataScope) => {
@@ -317,9 +357,36 @@
   }
 
   // 权限配置
-  const handlePermission = (row) => {
-    checkedKeys.value = [] // TODO: 从后端获取已选权限
+  const handlePermission = async (row) => {
+    currentPermissionRoleId.value = row.id
+    permissionDialogTitle.value = `权限配置 - ${row.name}`
+    checkedKeys.value = []
+    permissionTree.value = []
     permissionDialogVisible.value = true
+    permissionLoading.value = true
+
+    try {
+      const [menuRes, roleRes] = await Promise.all([
+        getMenuList(),
+        getRoleDetail(row.id)
+      ])
+
+      const menuTree = menuRes.data || menuRes.list || []
+      const roleDetail = roleRes.data || roleRes
+      const roleMenuIds = extractRoleMenuIds(roleDetail)
+
+      permissionTree.value = buildPermissionTree(menuTree)
+      permissionParentMap.value = buildPermissionParentMap(permissionTree.value)
+      checkedKeys.value = roleMenuIds
+
+      await nextTick()
+      treeRef.value?.setCheckedKeys(roleMenuIds)
+    } catch (error) {
+      ElMessage.error(error.message || '获取权限配置失败')
+      permissionDialogVisible.value = false
+    } finally {
+      permissionLoading.value = false
+    }
   }
 
   const buildRolePayload = () => ({
@@ -360,11 +427,42 @@
   }
 
   // 提交权限配置
-  const handlePermissionSubmit = () => {
-    const keys = treeRef.value.getCheckedKeys()
-    // TODO: 调用 API 保存权限配置
-    ElMessage.success('权限配置成功')
-    permissionDialogVisible.value = false
+  const handlePermissionSubmit = async () => {
+    if (!currentPermissionRoleId.value || !treeRef.value) return
+
+    permissionSubmitLoading.value = true
+
+    try {
+      const checkedMenuIds = treeRef.value.getCheckedKeys(false)
+      const menuIds = new Set(checkedMenuIds)
+
+      checkedMenuIds.forEach((menuId) => {
+        let parentId = permissionParentMap.value.get(menuId)
+
+        while (typeof parentId === 'number') {
+          menuIds.add(parentId)
+          parentId = permissionParentMap.value.get(parentId)
+        }
+      })
+
+      await setRoleMenu(currentPermissionRoleId.value, Array.from(menuIds))
+      ElMessage.success('权限配置成功')
+      permissionDialogVisible.value = false
+      await fetchRoleList()
+    } catch (error) {
+      ElMessage.error(error.message || '权限配置失败')
+    } finally {
+      permissionSubmitLoading.value = false
+    }
+  }
+
+  const handlePermissionDialogClose = () => {
+    currentPermissionRoleId.value = null
+    permissionDialogTitle.value = '权限配置'
+    permissionTree.value = []
+    checkedKeys.value = []
+    permissionParentMap.value = new Map()
+    treeRef.value?.setCheckedKeys([])
   }
 
   // 对话框关闭
@@ -414,5 +512,9 @@
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
+  }
+
+  .permission-tree-wrapper {
+    min-height: 240px;
   }
   </style>

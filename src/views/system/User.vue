@@ -37,8 +37,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" min-width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="290" fixed="right">
           <template #default="{ row }">
+            <el-button type="warning" size="small" :icon="UserFilled" @click="handleAssignRoles(row)">角色</el-button>
             <el-button type="primary" size="small" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
             <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -103,15 +104,50 @@
         <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="roleDialogVisible"
+      :title="roleDialogTitle"
+      width="520px"
+      @close="handleRoleDialogClose"
+    >
+      <div v-loading="roleDialogLoading">
+        <el-form label-width="80px">
+          <el-form-item label="角色分配">
+            <el-select
+              v-model="selectedRoleIds"
+              multiple
+              clearable
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="请选择角色"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="role in roleOptions"
+                :key="role.id"
+                :label="role.name"
+                :value="role.id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="roleSubmitLoading" @click="handleRoleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Refresh, Edit, Delete } from '@element-plus/icons-vue'
-import { getUserList, createUser, updateUser, deleteUser } from '../../api/user'
+import { Plus, Search, Refresh, Edit, Delete, UserFilled } from '@element-plus/icons-vue'
+import { getUserList, createUser, updateUser, deleteUser, getUserDetail, assignUserRoles } from '../../api/user'
 import { getDepartmentList } from '../../api/department'
+import { getRoleList } from '../../api/role'
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -119,6 +155,13 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
 const formRef = ref(null)
 const departmentTree = ref([])
+const roleDialogVisible = ref(false)
+const roleDialogTitle = ref('分配角色')
+const roleDialogLoading = ref(false)
+const roleSubmitLoading = ref(false)
+const roleOptions = ref([])
+const selectedRoleIds = ref([])
+const currentRoleUserId = ref(null)
 
 const searchForm = reactive({
   username: '',
@@ -249,6 +292,40 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
+const fetchRoleOptions = async () => {
+  const res = await getRoleList({ page: 1, pageSize: 1000 })
+  roleOptions.value = res.data?.list || res.data || res.list || []
+}
+
+const extractUserRoleIds = (user) => {
+  return (user?.roles || [])
+    .map((item) => item.roleId ?? item.role?.id)
+    .filter((id) => typeof id === 'number')
+}
+
+const handleAssignRoles = async (row) => {
+  currentRoleUserId.value = row.id
+  roleDialogTitle.value = `分配角色 - ${row.username}`
+  roleDialogVisible.value = true
+  roleDialogLoading.value = true
+
+  try {
+    const [roleRes, userRes] = await Promise.all([
+      getRoleList({ page: 1, pageSize: 1000 }),
+      getUserDetail(row.id)
+    ])
+
+    roleOptions.value = roleRes.data?.list || roleRes.data || roleRes.list || []
+    const userDetail = userRes.data || userRes
+    selectedRoleIds.value = extractUserRoleIds(userDetail)
+  } catch (error) {
+    ElMessage.error(error.message || '获取角色分配信息失败')
+    roleDialogVisible.value = false
+  } finally {
+    roleDialogLoading.value = false
+  }
+}
+
 // 删除
 const handleDelete = async (row) => {
   try {
@@ -264,6 +341,22 @@ const handleDelete = async (row) => {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
     }
+  }
+}
+
+const handleRoleSubmit = async () => {
+  if (!currentRoleUserId.value) return
+
+  roleSubmitLoading.value = true
+  try {
+    await assignUserRoles(currentRoleUserId.value, selectedRoleIds.value)
+    ElMessage.success('角色分配成功')
+    roleDialogVisible.value = false
+    await fetchUserList()
+  } catch (error) {
+    ElMessage.error(error.message || '角色分配失败')
+  } finally {
+    roleSubmitLoading.value = false
   }
 }
 
@@ -316,6 +409,12 @@ const handleDialogClose = () => {
   })
 }
 
+const handleRoleDialogClose = () => {
+  currentRoleUserId.value = null
+  roleDialogTitle.value = '分配角色'
+  selectedRoleIds.value = []
+}
+
 // 分页
 const handleSizeChange = () => {
   fetchUserList()
@@ -327,6 +426,7 @@ const handleCurrentChange = () => {
 
 onMounted(() => {
   fetchDepartmentTree()
+  fetchRoleOptions()
   fetchUserList()
 })
 </script>

@@ -24,3 +24,8 @@ export const deleteUser = (id) => {
 export const getUserDetail = (id) => {
   return request.get(`/user/${id}`)
 }
+
+// 为用户分配角色
+export const assignUserRoles = (id, roleIds) => {
+  return request.post(`/user/${id}/roles`, { roleIds })
+}
